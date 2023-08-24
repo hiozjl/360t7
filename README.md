@@ -1,2 +1,1 @@
-# 360t7
-360t7自动构建openwrt
+360t7构建openwrt
