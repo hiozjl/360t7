@@ -1,1 +1,1 @@
-360t7构建openwrt
+ct3003构建openwrt
