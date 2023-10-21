@@ -13,6 +13,8 @@ name: Build OpenWrt 360t7
 on:
   repository_dispatch:
   workflow_dispatch:
+  schedule:
+    - cron:  '22 16 * * *'
 
 env:
   TZ: Asia/Shanghai
