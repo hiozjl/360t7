@@ -1,0 +1,168 @@
+#
+# Copyright (c) 2019-2020 P3TERX <https://p3terx.com>
+#
+# This is free software, licensed under the MIT License.
+# See /LICENSE for more information.
+#
+# https://github.com/P3TERX/Actions-OpenWrt
+# Description: Build OpenWrt using GitHub Actions
+#
+
+name: Build OpenWrt redmiax6000
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+  schedule:
+    - cron:  '10 14 * * *'
+env:
+  TZ: Asia/Shanghai
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        ref: main
+
+    - name: Initialization environment
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        echo $(nproc)
+        free -h
+        sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
+        sudo -E apt-get -qq update
+        sudo -E apt-get -qq install sudo time git-core subversion build-essential gcc-multilib libncurses5-dev zlib1g-dev gawk flex gettext wget unzip grep rsync python3 tree python3-distutils
+        sudo -E apt-get -qq clean
+        sudo timedatectl set-timezone "$TZ"
+        sudo mkdir -p /workdir
+        sudo chown $USER:$GROUPS /workdir
+
+    - name: Clone source code
+      # working-directory: /workdir
+      run: |
+        pwd
+        git clone -b openwrt-21.02 --single-branch --depth=1 https://github.com/hanwckf/immortalwrt-mt798x openwrt
+        # ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
+        ls -l
+    # 插件包,不要可用注释
+    - name: Customization with DIY scripts
+      run: |
+        cd openwrt
+        rm -rf feeds/luci/applications/luci-app-passwall/
+        rm -rf feeds/packages/net/xray-core/
+        rm -rf feeds/packages/net/xray-plugin/
+        git clone https://github.com/xiaorouji/openwrt-passwall package/luci-app-passwall
+        git clone https://github.com/xiaorouji/openwrt-passwall-packages package/luci-app-passwall-packages
+        find ./ | grep Makefile | grep v2ray-geodata | xargs rm -f
+        find ./ | grep Makefile | grep mosdns | xargs rm -f
+        git clone https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
+        git clone https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
+
+
+    - name: package add luci-theme-design
+      run: |
+         cd openwrt
+         git clone -b js https://github.com/gngpp/luci-theme-design.git  package/luci-theme-design
+
+    - name: feeds init and download
+      run: |
+        cd openwrt
+        ./scripts/feeds update -a
+        git clone -b master --single-branch https://github.com/immortalwrt/packages.git packages_master && rm -rf ./feeds/packages/lang/golang && mv ./packages_master/lang/golang ./feeds/packages/lang && rm -rf ./packages_master
+        ./scripts/feeds install -a
+
+    - name: .config file init
+      run: |
+        cp ./.config openwrt/.config
+        cd openwrt
+        rm -rf ./bin ./build_dir ./tmp
+        make defconfig
+        cat ./.config
+
+
+    # - name: Cache Hook
+    #   uses: actions/cache@v3
+    #   with:
+    #     path: |
+    #       openwrt/bin
+    #       openwrt/build_dir
+    #       openwrt/staging_dir
+    #       openwrt/tmp
+    #     key: cache_ar300nand_${{ hashFiles('openwrt/.config') }}
+    #     restore-keys: |
+    #       cache_ar300nand_
+    #       cache_ar300nand
+
+    - name: .config file bak
+      run: |
+        mkdir ./bin
+        cp ./.config ./bin/config.bak
+
+    - name: Change IP to..10.0.0.1
+      run: |
+        cd openwrt
+        sed -i "s/192.168.1.1/10.0.0.1/" package/base-files/files/bin/config_generate
+        cat package/base-files/files/bin/config_generate|grep lan\)
+
+    - name: make
+      run: |
+        cd openwrt
+        find ./ -name *gcc
+        make download -j8
+        rm -rf build.log
+        # | grep -i error
+        make -j$(expr $(nproc) + 12) V=99 2>&1 | tee build.log | grep -i error
+        cp build.log ./bin
+        grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
+        [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
+        echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
+
+    - name: FIRMWARE set path
+      id: organize
+      run: |
+        cd openwrt/bin/
+        echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+
+    - name: Artifacts File Save
+      uses: actions/upload-artifact@main
+      with:
+        name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
+        path: ${{ env.FIRMWARE }}
+
+    - name: Release set path
+      run: |
+        touch release.txt
+        cd openwrt/bin/targets/*/*
+        rm -rf ./packages
+        echo "RELEASE_PATH=$PWD" >> $GITHUB_ENV
+
+    - name: pack bin dir
+      run: |
+        cd openwrt
+        tar -zcvf bin_dir.tar.gz ./bin/
+        mv bin_dir.tar.gz ${{ env.RELEASE_PATH }}/
+
+    - name: pack dl dir
+      run: |
+        cd openwrt
+        tar -zcvf dl.tar.gz ./dl/
+        mv dl.tar.gz ${{ env.RELEASE_PATH }}/
+        
+    # - name: Cloudupload
+    #   id: cloudupload
+    #   run: |
+    #     curl -fsSL git.io/file-transfer | sh
+    #     ./transfer wss --no-progress ${{ env.RELEASE_PATH }}/bin_dir.tar.gz 2>&1 | tee release.txt
+
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
+        body_path: release.txt
+        files: ${{ env.RELEASE_PATH }}/*
