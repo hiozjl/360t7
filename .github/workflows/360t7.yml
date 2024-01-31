@@ -57,6 +57,10 @@ jobs:
         rm -rf feeds/packages/net/xray-plugin/
         git clone https://github.com/xiaorouji/openwrt-passwall package/luci-app-passwall
         git clone https://github.com/xiaorouji/openwrt-passwall-packages package/luci-app-passwall-packages
+        find ./ | grep Makefile | grep v2ray-geodata | xargs rm -f
+        find ./ | grep Makefile | grep mosdns | xargs rm -f
+        git clone https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
+        git clone https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
 
 
     - name: package add luci-theme-design
