@@ -49,11 +49,11 @@ jobs:
         # ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
         ls -l
     # 插件包,不要可用注释
-    - name: feeds add kenzok8-package
-      run: |
-        cd openwrt
-        sed -i '$a src-git kenzo https://github.com/kenzok8/openwrt-packages' feeds.conf.default
-        sed -i '$a src-git small https://github.com/kenzok8/small' feeds.conf.default
+    #- name: feeds add kenzok8-package
+    #  run: |
+    #    cd openwrt
+    #    sed -i '$a src-git kenzo https://github.com/kenzok8/openwrt-packages' feeds.conf.default
+    #    sed -i '$a src-git small https://github.com/kenzok8/small' feeds.conf.default
 
     # - name: feeds add fw876/helloworld
     #   run: |
@@ -65,6 +65,7 @@ jobs:
       run: |
         cd openwrt
         ./scripts/feeds update -a
+        cd openwrt && git clone -b master --single-branch https://github.com/immortalwrt/packages.git packages_master && rm -rf ./feeds/packages/lang/golang && mv ./packages_master/lang/golang ./feeds/packages/lang && rm -rf ./packages_master
         ./scripts/feeds install -a
 
     - name: .config file init
