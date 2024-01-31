@@ -1,1 +1,1 @@
-ct3003构建openwrt
+redmiax6000自动编译
