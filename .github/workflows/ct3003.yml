@@ -49,22 +49,30 @@ jobs:
         # ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
         ls -l
     # 插件包,不要可用注释
-    - name: feeds add kenzok8-package
+    - name: Customization with DIY scripts
       run: |
         cd openwrt
-        sed -i '$a src-git kenzo https://github.com/kenzok8/openwrt-packages' feeds.conf.default
-        sed -i '$a src-git small https://github.com/kenzok8/small' feeds.conf.default
+        rm -rf feeds/luci/applications/luci-app-passwall/
+        rm -rf feeds/packages/net/xray-core/
+        rm -rf feeds/packages/net/xray-plugin/
+        git clone https://github.com/xiaorouji/openwrt-passwall package/luci-app-passwall
+        git clone https://github.com/xiaorouji/openwrt-passwall-packages package/luci-app-passwall-packages
+        find ./ | grep Makefile | grep v2ray-geodata | xargs rm -f
+        find ./ | grep Makefile | grep mosdns | xargs rm -f
+        git clone https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
+        git clone https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
 
-    # - name: feeds add fw876/helloworld
-    #   run: |
-    #     cd openwrt
-    #     sed -i "/helloworld/d" "feeds.conf.default"
-    #     echo "src-git helloworld https://github.com/fw876/helloworld.git" >> "feeds.conf.default"
+
+    - name: package add luci-theme-design
+      run: |
+         cd openwrt
+         git clone -b js https://github.com/gngpp/luci-theme-design.git  package/luci-theme-design
 
     - name: feeds init and download
       run: |
         cd openwrt
         ./scripts/feeds update -a
+        git clone -b master --single-branch https://github.com/immortalwrt/packages.git packages_master && rm -rf ./feeds/packages/lang/golang && mv ./packages_master/lang/golang ./feeds/packages/lang && rm -rf ./packages_master
         ./scripts/feeds install -a
 
     - name: .config file init
