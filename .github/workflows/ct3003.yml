@@ -102,10 +102,10 @@ jobs:
         mkdir ./bin
         cp ./.config ./bin/config.bak
 
-    - name: Change IP to..192.168.8.1
+    - name: Change IP to..10.0.0.253
       run: |
         cd openwrt
-        sed -i "s/192.168.1.1/192.168.8.1/" package/base-files/files/bin/config_generate
+        sed -i "s/192.168.1.1/10.0.0.253/" package/base-files/files/bin/config_generate
         cat package/base-files/files/bin/config_generate|grep lan\)
 
     - name: make
