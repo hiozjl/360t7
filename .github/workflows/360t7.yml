@@ -45,7 +45,7 @@ jobs:
       # working-directory: /workdir
       run: |
         pwd
-        git clone -b openwrt-21.02 --single-branch --depth=1 https://github.com/padavanonly/immortalwrt-mt798x openwrt
+        git clone -b openwrt-23.05 --single-branch --depth=1 https://github.com/padavanonly/immortalwrt-mt798x-23.05 openwrt
         # ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
         ls -l
     # 插件包,不要可用注释
