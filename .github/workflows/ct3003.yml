@@ -62,12 +62,6 @@ jobs:
         git clone https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
         git clone https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
 
-
-    - name: package add luci-theme-design
-      run: |
-         cd openwrt
-         git clone -b js https://github.com/gngpp/luci-theme-design.git  package/luci-theme-design
-
     - name: feeds init and download
       run: |
         cd openwrt
